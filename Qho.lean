@@ -104,11 +104,24 @@ theorem numberOp_lower
     (numberOp a ad) (a x) = (c - 1) • (a x) := by
   rw [numberOp_annihilation_apply a ad h, hx, map_smul, sub_smul, one_smul]
 
+/- Useful lemma: N(a^k |x⟩) = (c - k) • (a^k |x⟩) -/
+theorem numberOp_annihilation_pow
+    (h : ⟦a, ad⟧ = 1) {x : H} {c : ℂ} {k : ℕ}
+    (hx : (numberOp a ad) x = c • x) :
+    (numberOp a ad) ((a ^ k) x) = (c - k) • ((a ^ k) x) := by
+  induction k with
+  | zero => simp [hx]
+  | succ k ih =>
+    rw [pow_succ', Module.End.mul_apply, numberOp_lower a ad h ih, sub_sub]
+    push_cast
+    rfl
+
+
 /-- ⟪x,Nx⟫ = c•⟪x,x⟫ = ⟪a x,a x⟫ = ‖a x‖² ≥ 0 → c ∈ ℝ+ -/
 theorem numberOp_eigenvalue_re_nonneg
-  (hadj : IsAdjoint a ad) {x : H} {c : ℂ}
-  (hx : (numberOp a ad) x = c • x) (h0x : x ≠ 0) :
-  0 ≤ c.re := by
+    (hadj : IsAdjoint a ad) {x : H} {c : ℂ}
+    (hx : (numberOp a ad) x = c • x) (h0x : x ≠ 0) :
+    0 ≤ c.re := by
   have hid : c * ⟪x, x⟫_ℂ = ⟪a x, a x⟫_ℂ := by
     have : ⟪x, (numberOp a ad) x⟫_ℂ = c * ⟪x, x⟫_ℂ := by
       rw [hx]
@@ -122,6 +135,12 @@ theorem numberOp_eigenvalue_re_nonneg
     exact this
   have hpos : 0 < ‖x‖^2 := pow_pos (norm_pos_iff.mpr h0x) 2
   nlinarith [hnorm, hpos]
+
+theorem numberOp_eigenvalue_nat
+    (h : comm a ad = 1) (hadj : IsAdjoint a ad)
+    {x : H} {c : ℂ} (h0x : x ≠ 0) (hx : (numberOp a ad) x = c • x) :
+    ∃ n : ℕ, c = n := by
+  sorry
 
 end HarmonicOscillator
 
