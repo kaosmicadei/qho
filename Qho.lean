@@ -106,8 +106,8 @@ theorem numberOp_lower
 
 /- Useful lemma: N(a^k |x⟩) = (c - k) • (a^k |x⟩) -/
 theorem numberOp_annihilation_pow
-    (h : ⟦a, ad⟧ = 1) {x : H} {c : ℂ} {k : ℕ}
-    (hx : (numberOp a ad) x = c • x) :
+    (h : ⟦a, ad⟧ = 1) {x : H} {c : ℂ}
+    (hx : (numberOp a ad) x = c • x) (k : ℕ):
     (numberOp a ad) ((a ^ k) x) = (c - k) • ((a ^ k) x) := by
   induction k with
   | zero => simp [hx]
@@ -140,6 +140,20 @@ theorem numberOp_eigenvalue_nat
     (h : comm a ad = 1) (hadj : IsAdjoint a ad)
     {x : H} {c : ℂ} (h0x : x ≠ 0) (hx : (numberOp a ad) x = c • x) :
     ∃ n : ℕ, c = n := by
+  classical
+  have ha0x : (a ^ 0) x ≠ 0 := by simp [h0x]
+  have hnil : ∃ k : ℕ, (a ^ k) x = 0 := by
+    by_contra hcon
+    push Not at hcon
+    have hupper : ∀ k : ℕ, (k : ℝ) ≤ c.re := by
+      intro k
+      have hpow := numberOp_annihilation_pow a ad h hx k
+      have hnonneg := numberOp_eigenvalue_re_nonneg a ad hadj hpow (hcon k)
+      rw [Complex.sub_re, Complex.natCast_re, sub_nonneg] at hnonneg
+      exact hnonneg
+    obtain ⟨k, hk⟩ := exists_nat_gt c.re
+    exact absurd (hupper k) (not_le.mpr hk)
+  -- to be continued...
   sorry
 
 end HarmonicOscillator
