@@ -73,7 +73,7 @@ open scoped InnerProductSpace
 
 def IsAdjoint (a ad : Module.End ℂ H) : Prop := ∀ x y : H, ⟪a x, y⟫_ℂ = ⟪x, ad y⟫_ℂ
 
-theorem numberOp_inner_self (h : IsAdjoint a ad) (x : H) :
+theorem numberOp_eq_ladder (h : IsAdjoint a ad) (x : H) :
     ⟪x, numberOp a ad x⟫_ℂ = ⟪a x, a x⟫_ℂ := by
   unfold numberOp
   rw [h, Module.End.mul_apply]
@@ -107,7 +107,7 @@ theorem numberOp_lower
 /- Useful lemma: N(a^k |x⟩) = (c - k) • (a^k |x⟩) -/
 theorem numberOp_annihilation_pow
     (h : ⟦a, ad⟧ = 1) {x : H} {c : ℂ}
-    (hx : (numberOp a ad) x = c • x) (k : ℕ):
+    (hx : (numberOp a ad) x = c • x) (k : ℕ) :
     (numberOp a ad) ((a ^ k) x) = (c - k) • ((a ^ k) x) := by
   induction k with
   | zero => simp [hx]
@@ -116,18 +116,15 @@ theorem numberOp_annihilation_pow
     push_cast
     rfl
 
-
 /-- ⟪x,Nx⟫ = c•⟪x,x⟫ = ⟪a x,a x⟫ = ‖a x‖² ≥ 0 → c ∈ ℝ+ -/
 theorem numberOp_eigenvalue_re_nonneg
     (hadj : IsAdjoint a ad) {x : H} {c : ℂ}
     (hx : (numberOp a ad) x = c • x) (h0x : x ≠ 0) :
     0 ≤ c.re := by
-  have hid : c * ⟪x, x⟫_ℂ = ⟪a x, a x⟫_ℂ := by
-    have : ⟪x, (numberOp a ad) x⟫_ℂ = c * ⟪x, x⟫_ℂ := by
-      rw [hx]
-      simp
-    rw [numberOp_inner_self a ad hadj x] at this
-    exact this.symm
+  have hid : c * ⟪x, x⟫_ℂ = ⟪a x, a x⟫_ℂ :=
+    calc
+      c * ⟪x, x⟫_ℂ = ⟪x, (numberOp a ad) x⟫_ℂ := by rw [hx]; simp
+      _ = ⟪a x, a x⟫_ℂ := by rw [numberOp_eq_ladder a ad hadj x]
   rw [inner_self_eq_norm_sq_to_K, inner_self_eq_norm_sq_to_K] at hid
   have hnorm : c.re * ‖x‖^2 = ‖a x‖^2 := by
     have := congrArg Complex.re hid
@@ -142,7 +139,8 @@ theorem numberOp_eigenvalue_nat
     ∃ n : ℕ, c = n := by
   classical
   have ha0x : (a ^ 0) x ≠ 0 := by simp [h0x]
-  have hnil : ∃ k : ℕ, (a ^ k) x = 0 := by
+  -- existence of a ground state, |0⟩
+  have hground : ∃ k : ℕ, (a ^ k) x = 0 := by
     by_contra hcon
     push Not at hcon
     have hupper : ∀ k : ℕ, (k : ℝ) ≤ c.re := by
@@ -153,8 +151,28 @@ theorem numberOp_eigenvalue_nat
       exact hnonneg
     obtain ⟨k, hk⟩ := exists_nat_gt c.re
     exact absurd (hupper k) (not_le.mpr hk)
-  -- to be continued...
-  sorry
+  -- find a ground state
+  have hzero : Nat.find hground ≠ 0 := by
+    intro hz
+    have := Nat.find_spec hground
+    rw [hz] at this
+    exact ha0x this
+  -- the last non-zero state is the one above the ground state, |1⟩
+  obtain ⟨p, hp⟩ := Nat.exists_eq_succ_of_ne_zero hzero
+  have hone : (a ^ p) x ≠ 0 := Nat.find_min hground (by rw [hp]; simp)
+  have haone : a ((a ^ p) x) = 0 := by
+    rw [← Module.End.mul_apply, ← pow_succ', Nat.add_one, ← hp]
+    exact Nat.find_spec hground
+  have h0n : (numberOp a ad) ((a ^ p) x) = 0 := by
+    simp [numberOp, haone]
+  have h1 := numberOp_annihilation_pow a ad h hx p
+  rw [h0n] at h1
+  have h2 := smul_eq_zero.mp h1.symm
+  rw [sub_eq_zero] at h2
+  exists p
+  cases h2 with
+  | inl h => exact h
+  | inr h => exact absurd h hone
 
 end HarmonicOscillator
 
