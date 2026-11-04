@@ -9,8 +9,7 @@ We use ladder operators a and a†, the number operator N = a†·a together wit
 their commutation relations as starting point. Using the number operations, the
 Hamiltonian of a 1D harmonic oscillator can be written as H = ℏω(N + 1/2).
 -/
-
-namespace Quantum
+namespace QuantumHarmonicOscillator
 
 /-!
 # Commutator
@@ -97,10 +96,15 @@ the properties of the action of the ladder operators on these eigenstates.
 In the case of quantum mechanics, the Hilbert space is defined over the complex
 numbers. -/
 variable {H : Type*} [NormedAddCommGroup H] [InnerProductSpace ℂ H]
-/- Ladder operators as ℂ-linear maps on the Hilbert space H. -/
+/- Ladder operators as ℂ-linear map on the Hilbert space H. -/
 variable (a ad : H →ₗ[ℂ] H)
 /- General hypothesis: there is x ∈ H such that N x = c • x. -/
 variable {x : H} {c : ℂ}
+
+/-
+NOTE: Mathlib uses Module as a generalisation of vector spaces. The map H →ₗ[ℂ] H
+is a endomorphism. So, we could replace `H →ₗ[ℂ] H` with `Module.End ℂ H`.
+-/
 
 section Eigenstate
 
@@ -265,4 +269,4 @@ theorem eigenvalue_discrete
 
 end EigenvalueDiscrete
 
-end Quantum
+end QuantumHarmonicOscillator
