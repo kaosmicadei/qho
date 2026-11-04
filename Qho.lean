@@ -102,8 +102,8 @@ variable (a ad : H →ₗ[ℂ] H)
 variable {x : H} {c : ℂ}
 
 /-
-NOTE: Mathlib uses Module as a generalisation of vector spaces. The map H →ₗ[ℂ] H
-is a endomorphism. So, we could replace `H →ₗ[ℂ] H` with `Module.End ℂ H`.
+NOTE: `H →ₗ[ℂ] H` could be replaced with `Module.End ℂ H`. `Module` is the
+generalisation of vector spaces and `End` refers to endomorphisms
 -/
 
 section Eigenstate
@@ -130,8 +130,31 @@ theorem number_lower_k (h : ⟦a, ad⟧ = 1) (hx : (numberOp a ad) x = c • x) 
   | zero => simp [hx]
   | succ k ih =>
     rw [pow_succ', Module.End.mul_apply, number_lower_one a ad h ih, sub_sub]
-    push_cast
-    rfl
+    norm_cast
+
+/-- N(a† x) = a†(N x) + a† x. -/
+theorem number_creation_apply (h : ⟦a, ad⟧ = 1) :
+    (numberOp a ad) (ad x) = ad ((numberOp a ad) x) + ad x := by
+  have : ⟦numberOp a ad, ad⟧ x = ad x := LinearMap.congr_fun (number_creation_comm a ad h) x
+  simp? [numberOp, comm, sub_eq_iff_eq_add] at this
+  rw [numberOp, Module.End.mul_apply, this]
+  abel
+
+/-- Applying the creation operator to an eigenstate of the number operator
+raises its eigenvalue by 1. -/
+theorem number_raise_one (h : ⟦a, ad⟧ = 1) (hx : (numberOp a ad) x = c • x) :
+    (numberOp a ad) (ad x) = (c + 1) • (ad x) := by
+  rw [number_creation_apply a ad h, hx, map_smul, add_smul, one_smul]
+
+/-- Applying the creation operator k times to an eigenstate of the number
+operator raises its eigenvalue by k with k ∈ ℕ. -/
+theorem number_raise_k (h : ⟦a, ad⟧ = 1) (hx : (numberOp a ad) x = c • x) (k : ℕ) :
+    (numberOp a ad) ((ad^k) x) = (c + k) • ((ad^k) x) := by
+  induction k with
+  | zero => simp [hx]
+  | succ k ih =>
+    rw [pow_succ', Module.End.mul_apply, number_raise_one a ad h ih, add_assoc]
+    norm_cast
 
 end Eigenstate
 
