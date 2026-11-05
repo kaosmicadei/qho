@@ -12,7 +12,7 @@ Hamiltonian of a 1D harmonic oscillator can be written as H = ℏω(N + 1/2).
 namespace QuantumHarmonicOscillator
 
 /-!
-# Commutator
+## Commutator
 Before we start proving the properties of the quantum harmonic oscillator, we
 need to establish the basic properties of commutators.
 -/
@@ -28,6 +28,13 @@ def comm (x y : A) : A := x * y - y * x
 /- To make the expressions easier to read, we introduce the notation ⟦x, y⟧ for the
 commutator of x and y. -/
 notation "⟦" x ", " y "⟧" => comm x y
+
+/-
+### Basic properties
+In this file we present some basic properties of the commutator. However, not
+all of them will be used in the proofs shown here.
+-/
+section BasicProperties
 
 theorem comm_self (x : A) : ⟦x, x⟧ = 0 := by simp [comm]
 
@@ -50,6 +57,8 @@ theorem comm_mul_left (x y z : A) : ⟦x * y, z⟧ = x * ⟦y, z⟧ + ⟦x, z⟧
 theorem comm_mul_right (x y z : A) : ⟦x, y * z⟧ = ⟦x, y⟧ * z + y * ⟦x, z⟧ := by
   unfold comm
   noncomm_ring
+
+end BasicProperties
 
 end Commutator
 
@@ -85,13 +94,6 @@ theorem number_creation_comm (h : ⟦a, ad⟧ = 1) : ⟦numberOp a ad, ad⟧ = a
 
 end CCR
 
-/-!
-## Eigenstates of the number operator
-Assume x is an eigenstate of the number operator with eigenvalue c, i.e.,
-N x = c • x. We use the commutation relations of the ladder operators to derive
-the properties of the action of the ladder operators on these eigenstates.
--/
-
 /- A Hilbert space is normed vector space with norm induced by the inner product.
 In the case of quantum mechanics, the Hilbert space is defined over the complex
 numbers. -/
@@ -106,6 +108,12 @@ NOTE: `H →ₗ[ℂ] H` could be replaced with `Module.End ℂ H`. `Module` is t
 generalisation of vector spaces and `End` refers to endomorphisms
 -/
 
+/-!
+## Eigenstates of the number operator
+Assume x is an eigenstate of the number operator with eigenvalue c, i.e.,
+N x = c • x. We use the commutation relations of the ladder operators to derive
+the properties of the action of the ladder operators on these eigenstates.
+-/
 section Eigenstate
 
 /-- N(a x) = a(N x) - a x. -/
@@ -189,7 +197,7 @@ theorem eigenvalue_norm_sq_eq_norm_sq (hadj : IsAdjoint a ad) (hx : (numberOp a 
 end Norm
 
 /-!
-## Prove number operator eigenvalue is real and non-negative
+## Prove number operator eigenvalue are real and non-negative
 From `number_inner_eq_norm` and `number_inner_eq_norm_annihilation` we can conclude
 that the eigenvalue of the number operator is real and non-negative.
 -/
@@ -255,6 +263,19 @@ end GroundState
 
 /-!
 ## Number operator eigenvalues are discrete
+From the theorems `number_lower_k` and `number_raise_k`, we know that the
+eigenvalues of the number operator are move up and down by a whole unit, which,
+by definition, implies the eigenvalues are discrete.
+
+From the theorems `eigenvalue_re_nonnneg` and `eigenvalue_im_zero`, we know that
+the eigenvalues of the number operator are non-negative real numbers.
+
+Now, let's prove that the eigenvalues of the number operator are natural numbers
+and that the ground state has eigenvalue zero.
+
+Finally, we can prove that every non-negative integer can be realized as an
+eigenvalue of the number operator by successively applying the creation operator
+to the ground state.
 -/
 section EigenvalueDiscrete
 
@@ -303,9 +324,8 @@ theorem eigenvalue_nat_realized (h : ⟦a, ad⟧ = 1) (hax₀ : a x₀ = 0) (n :
   have h1 := eigenvalue_ground_state_eq_zero a ad hax₀
   rw [← zero_smul ℂ x₀] at h1
   have h2 := number_raise_k a ad h h1 n
-  simp? at h2
-  rw [h2]
-  norm_cast
+  simp? [Nat.cast_smul_eq_nsmul] at h2
+  exact h2
 
 end EigenvalueDiscrete
 
