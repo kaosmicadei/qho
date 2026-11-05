@@ -235,7 +235,7 @@ section GroundState
 
 theorem exists_ground_state
     (h : ⟦a, ad⟧ = 1) (hadj : IsAdjoint a ad)
-    {x : H} {c : ℂ} (hx : (numberOp a ad) x = c • x) :
+    (hx : (numberOp a ad) x = c • x) :
     ∃ k : ℕ, (a ^ k) x = 0 := by
   -- Let's prove there is no such k and c-k is always non-negative for any k.
   by_contra hcon
@@ -258,29 +258,31 @@ end GroundState
 -/
 section EigenvalueDiscrete
 
-theorem eigenvalue_discrete
+/-- If x is an eigenstate of the number operator, N x = c • x, then c ∈ ℕ. -/
+theorem eigenvalue_mem_nat
     (h : ⟦a, ad⟧ = 1) (hadj : IsAdjoint a ad)
-    {x : H} {c : ℂ} (h0x : x ≠ 0) (hx : (numberOp a ad) x = c • x) :
+    (h0x : x ≠ 0) (hx : (numberOp a ad) x = c • x) :
     ∃ n : ℕ, c = n := by
   -- To be able to use decidable instances for natural numbers we need to use
   -- classical logic
   classical
   -- Existence of a ground state such that gets annihilated by a, i.e., a|0⟩ = 0.
   have hvanish : ∃ k, (a ^ k) x = 0 := exists_ground_state a ad h hadj hx
-  have hground : Nat.find hvanish ≠ 0 := by
+  -- k is a non-zero natural number
+  have hk : Nat.find hvanish ≠ 0 := by
     intro hz
     have := Nat.find_spec hvanish
     rw [hz] at this
     simp [h0x] at this
-  -- There is a power p = k-1 such that a^p |x⟩ = |0⟩
-  obtain ⟨p, hp⟩ := Nat.exists_eq_succ_of_ne_zero hground
-  have hzero : (a ^ p) x ≠ 0 := Nat.find_min hvanish (by rw [hp]; simp)
+  -- There is a p = k-1 such that a^p |x⟩ = |0⟩
+  obtain ⟨p, hp⟩ := Nat.exists_eq_succ_of_ne_zero hk
+  have hground : (a ^ p) x ≠ 0 := Nat.find_min hvanish (by rw [hp]; simp)
   -- Applying the annihilation operator to the ground state yields zero.
-  have hazero: a ((a ^ p) x) = 0 := by
+  have haground: a ((a ^ p) x) = 0 := by
     rw [← Module.End.mul_apply, ← pow_succ', Nat.add_one, ← hp]
     exact Nat.find_spec hvanish
   -- N|0⟩ = 0 therefore, N(a^p|x⟩) = 0
-  have h0n : (numberOp a ad) ((a ^ p) x) = 0 := by simp [numberOp, hazero]
+  have h0n : (numberOp a ad) ((a ^ p) x) = 0 := by simp [numberOp, haground]
   have hcp : (c - p) • ((a ^ p) x) = 0 := by
     have := number_lower_k a ad h hx p
     rw [h0n] at this
@@ -288,7 +290,22 @@ theorem eigenvalue_discrete
   have h1 : c - p = 0 ∨ (a ^ p) x = 0 := smul_eq_zero.mp hcp
   cases h1 with
   | inl hl => rw [sub_eq_zero] at hl; exists p
-  | inr hr => exact absurd hr hzero
+  | inr hr => exact absurd hr hground
+
+/-- The eigenvalue of a ground state is zero. -/
+theorem eigenvalue_ground_state_eq_zero (hax₀ : a x₀ = 0) : (numberOp a ad) x₀ = 0 := by
+  simp [numberOp, hax₀]
+
+/-- Every n ∈ ℕ can be realized as an eigenvalue of the number operator by
+applying (ad ^ n) to the ground state. -/
+theorem eigenvalue_nat_realized (h : ⟦a, ad⟧ = 1) (hax₀ : a x₀ = 0) (n : ℕ) :
+    (numberOp a ad) ((ad ^ n) x₀) = n • ((ad ^ n) x₀) := by
+  have h1 := eigenvalue_ground_state_eq_zero a ad hax₀
+  rw [← zero_smul ℂ x₀] at h1
+  have h2 := number_raise_k a ad h h1 n
+  simp? at h2
+  rw [h2]
+  norm_cast
 
 end EigenvalueDiscrete
 
