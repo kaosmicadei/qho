@@ -34,12 +34,12 @@ The ladder operators satisfy the canonical commutation relation ⟦a, a†⟧ = 
 
 Being the number operator defined as N = a†·a, it satisfies the commutation
 relations:
-* ⟦N, a⟧ = -a,
-* ⟦N, a†⟧ = a†.
+* [N, a] = -a,
+* [N, a†] = a†.
 -/
 section CCR
 
-/-- Number operator defined as N = a†·a -/
+/-- Number operator defined as N = a†·a. -/
 def numberOp : Module.End ℂ H := ad * a
 
 /-- The commutation between the ladder operators is passed as a hypothesis because
@@ -127,6 +127,13 @@ section EigenvaluesRealNonNegative
 
 def IsAdjoint (a ad : Module.End ℂ H) : Prop := ∀ x y : H, ⟪a x, y⟫ = ⟪x, ad y⟫
 
+/-- Adjoint of ladder operators is symmetric. -/
+theorem IsAdjoint.symm (h : IsAdjoint a ad) : IsAdjoint ad a := by
+  intro x y
+  have conjugate := congrArg (starRingEnd ℂ) (h y x)
+  rw [inner_conj_symm, inner_conj_symm] at conjugate
+  exact conjugate.symm
+
 /-- ⟪x, N x⟫ = c * ‖x‖^2 -/
 theorem inner_number_eq_norm (hx : (numberOp a ad) x = c • x) :
     ⟪x, (numberOp a ad) x⟫ = c * ‖x‖^2 := by
@@ -206,12 +213,61 @@ theorem exists_ground_state
 end GroundState
 
 /-!
+## Creator operator never vanishes
+The creator operator ad never annihilates a non-zero state x.
+-/
+section CreatorOperatorNeverVanish
+
+theorem inner_annihilation_creation_norm (hadj : IsAdjoint a ad) (x : H) :
+    ⟪x, (a * ad) x⟫ = ‖ad x‖^2 := by
+    rw [Module.End.mul_apply, ← hadj.symm, inner_self_eq_norm_sq_to_K]
+    norm_cast
+
+theorem inner_annihilation_creation_norm_add
+    (h : ⁅a, ad⁆ = 1) (hadj : IsAdjoint a ad) (x : H) :
+    ⟪x, (a * ad) x⟫ = ‖x‖^2 + ‖a x‖^2 := by
+    have h' : a * ad = 1 + ad * a := by
+      rw [Ring.lie_def, sub_eq_iff_eq_add] at h
+      exact h
+    simp? [h']
+    rw [← hadj, inner_self_eq_norm_sq_to_K]
+    norm_cast
+
+theorem norm_creation
+    (h : ⁅a, ad⁆ = 1) (hadj : IsAdjoint a ad) (x : H) :
+    ‖ad x‖^2 = ‖x‖^2 + ‖a x‖^2 := by
+  have := inner_annihilation_creation_norm_add a ad h hadj x
+  rw [inner_annihilation_creation_norm a ad hadj x] at this
+  exact_mod_cast this
+
+theorem creation_apply_not_zero
+    (h : ⁅a, ad⁆ = 1) (hadj : IsAdjoint a ad) (h0x : x ≠ 0) :
+    ad x ≠ 0 := by
+  intro hcontra
+  have hnorm := norm_creation a ad h hadj x
+  have hpos : 0 < ‖x‖^2 := pow_pos (norm_pos_iff.mpr h0x) 2
+  have hpos' : 0 < ‖ad x‖^2 := by rw [hnorm]; nlinarith
+  simp [hcontra] at hpos'
+
+theorem creation_apply_k_not_zero
+    (h : ⁅a, ad⁆ = 1) (hadj : IsAdjoint a ad) (h0x : x ≠ 0) :
+    ∀ k : ℕ, (ad ^ k) x ≠ 0 := by
+    intro k
+    induction k with
+    | zero => simp [h0x]
+    | succ k ih =>
+      rw [pow_succ', Module.End.mul_apply]
+      exact creation_apply_not_zero a ad h hadj ih
+
+end CreatorOperatorNeverVanish
+
+/-!
 ## Number operator eigenvalues are discrete
 From the theorems `number_lower_k` and `number_raise_k`, we know that the
 eigenvalues of the number operator are move up and down by a whole unit, which,
 by definition, implies the eigenvalues are discrete.
 
-From the theorems `eigenvalue_re_nonnneg` and `eigenvalue_im_zero`, we know that
+From the theorems `eigenvalue_nonnneg` and `eigenvalue_im_zero`, we know that
 the eigenvalues of the number operator are non-negative real numbers.
 
 Now, let's prove that the eigenvalues of the number operator are natural numbers
