@@ -15,6 +15,10 @@ namespace QuantumHarmonicOscillator
 ## Commutator
 Before we start proving the properties of the quantum harmonic oscillator, we
 need to establish the basic properties of commutators.
+
+Mathlib already provides a definition of the commutator as `Ring.lie`. However,
+I wanted to try to implement it myself to learn more about definitions and custom
+notations.
 -/
 section Commutator
 
@@ -59,6 +63,10 @@ theorem comm_mul_right (x y z : A) : ⟦x, y * z⟧ = ⟦x, y⟧ * z + y * ⟦x,
   noncomm_ring
 
 end BasicProperties
+
+theorem lie_mul_left (x y z : A) : ⁅x * y, z⁆ = x * ⁅y, z⁆ + ⁅x, z⁆ * y := by
+  simp only [Ring.lie_def]
+  noncomm_ring
 
 end Commutator
 
@@ -245,19 +253,20 @@ theorem exists_ground_state
     (h : ⟦a, ad⟧ = 1) (hadj : IsAdjoint a ad)
     (hx : (numberOp a ad) x = c • x) :
     ∃ k : ℕ, (a ^ k) x = 0 := by
-  -- Let's prove there is no such k and c-k is always non-negative for any k.
+  -- Let's assume there is no such k.
   by_contra hcon
   push Not at hcon
-  have hnoupper : ∀ k : ℕ, (k : ℝ) ≤ c.re := by
+  -- If there is no k such that (a^k) x = 0, then for all k, 0 ≤ c - k.
+  have hbound : ∀ k : ℕ, (k : ℝ) ≤ c.re := by
     intro k
     have hpow := number_lower_k a ad h hx k
     have hnonneg := eigenvalue_re_nonneg a ad hadj hpow (hcon k)
     rw [Complex.sub_re, Complex.natCast_re, sub_nonneg] at hnonneg
     exact hnonneg
-  -- There is always a natural number greater than a real number.
+  -- But there is always a natural number greater than a real number.
   obtain ⟨k, hk⟩ := exists_nat_gt c.re
   -- Contradiction!
-  exact absurd (hnoupper k) (not_le.mpr hk)
+  exact absurd (hbound k) (not_le.mpr hk)
 
 end GroundState
 
