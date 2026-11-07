@@ -11,10 +11,15 @@ Hamiltonian of a 1D harmonic oscillator can be written as H = ℏω(N + 1/2).
 -/
 namespace QuantumHarmonicOscillator
 
+/-! ## Prologue -/
+
 /- A Hilbert space is normed vector space with norm induced by the inner product.
 In the case of quantum mechanics, the Hilbert space is defined over the complex
 numbers. -/
 variable {H : Type*} [NormedAddCommGroup H] [InnerProductSpace ℂ H]
+
+/- Generic eigenstate and eigenvalue. -/
+variable {x : H} {c : ℂ}
 
 /- For simplicity we use the ladder operators as opaque variable. Ladder
 operators are ℂ-linear maps on the Hilbert space H. `H →ₗ[ℂ] H`. On Mathlib,
@@ -23,10 +28,19 @@ generalisation of the vector space defined over a ring, and `End` stands for
 endomorphism. -/
 variable (a ad : Module.End ℂ H)
 
-variable {x : H} {c : ℂ}
-
 /- Open the notation for the inner product -/
 open scoped ComplexInnerProductSpace
+
+/- The ladder operators a and a† are adjoint to each other. -/
+def IsAdjoint (a ad : Module.End ℂ H) : Prop := ∀ x y : H, ⟪a x, y⟫ = ⟪x, ad y⟫
+
+/-- Adjoint of ladder operators is symmetric. -/
+theorem IsAdjoint.symm (h : IsAdjoint a ad) : IsAdjoint ad a := by
+  intro x y
+  -- Conjugate symmetry of the inner product: ⟪x, y⟫* = ⟪y, x⟫
+  have conjugate := congrArg (starRingEnd ℂ) (h y x)
+  rw [inner_conj_symm, inner_conj_symm] at conjugate
+  exact conjugate.symm
 
 /-!
 ## Canonical commutation relation
@@ -125,15 +139,6 @@ end LadderOperatorsApplication
 -/
 section EigenvaluesRealNonNegative
 
-def IsAdjoint (a ad : Module.End ℂ H) : Prop := ∀ x y : H, ⟪a x, y⟫ = ⟪x, ad y⟫
-
-/-- Adjoint of ladder operators is symmetric. -/
-theorem IsAdjoint.symm (h : IsAdjoint a ad) : IsAdjoint ad a := by
-  intro x y
-  have conjugate := congrArg (starRingEnd ℂ) (h y x)
-  rw [inner_conj_symm, inner_conj_symm] at conjugate
-  exact conjugate.symm
-
 /-- ⟪x, N x⟫ = c * ‖x‖^2 -/
 theorem inner_number_eq_norm (hx : (numberOp a ad) x = c • x) :
     ⟪x, (numberOp a ad) x⟫ = c * ‖x‖^2 := by
@@ -186,12 +191,12 @@ eigenstate x₀ such that a x₀ = 0.
 
 The reasoning is simple. Since there is not limit of how many times we can apply
 the annihilation operator, if all the eigenvalues of N are non-negative and
-N (a^k x) = (c - k) • (a^k x), then c - k ≥ 0 or (a^k x) = 0. Therefore, must
-exists k : ℕ, k > c.re such that (a^k x) = 0, i.e., the state is annihilated.
+N (a^k x) = (c - k) • (a^k x), then either for all k:ℕ, c - k ≥ 0 or exists k:ℕ,
+such that (a^k x) = 0.
 -/
 section GroundState
 
-theorem exists_ground_state
+theorem lower_terminates
     (h : ⁅a, ad⁆ = 1) (hadj : IsAdjoint a ad)
     (hx : (numberOp a ad) x = c • x) :
     ∃ k : ℕ, (a ^ k) x = 0 := by
@@ -210,13 +215,37 @@ theorem exists_ground_state
   -- Contradiction!
   exact absurd (hle k) (not_le.mpr hk)
 
+theorem exists_ground_state
+    (h : ⁅a, ad⁆ = 1) (hadj : IsAdjoint a ad)
+    (hx : (numberOp a ad) x = c • x) (h0x : x ≠ 0) :
+    ∃ k : ℕ, (a ^ k) x ≠ 0 ∧ a ((a ^ k) x) = 0 := by
+  classical
+  -- Existence of a ground state such that gets annihilated by a, i.e., a|0⟩ = 0.
+  have vanish : ∃ k : ℕ, (a ^ k) x = 0 := lower_terminates a ad h hadj hx
+  -- k is a non-zero natural number
+  have hk : Nat.find vanish ≠ 0 := by
+    intro hz
+    have := Nat.find_spec vanish
+    rw [hz] at this
+    simp? at this
+    exact h0x this
+  -- There is a p = k-1 such that x₀ = (a^p) x ≠ 0.
+  obtain ⟨p, hp⟩ := Nat.exists_eq_succ_of_ne_zero hk
+  have ground : (a^p) x ≠ 0 := Nat.find_min vanish (by simp [hp])
+  -- Applying the annihilation operator to the ground state yields zero.
+  have aground : a ((a^p) x) = 0 := by
+    rw [← Module.End.mul_apply, ← pow_succ', Nat.add_one, ← hp]
+    exact Nat.find_spec vanish
+  exact ⟨p, ground, aground⟩
+
 end GroundState
 
 /-!
-## Creator operator never vanishes
-The creator operator ad never annihilates a non-zero state x.
+## Creation operator never vanishes
+Applying the creation operator any number of times to a non-zero state never
+results in zero.
 -/
-section CreatorOperatorNeverVanish
+section CreationOperatorNeverVanish
 
 theorem inner_annihilation_creation_norm (hadj : IsAdjoint a ad) (x : H) :
     ⟪x, (a * ad) x⟫ = ‖ad x‖^2 := by
@@ -259,7 +288,7 @@ theorem creation_apply_k_not_zero
       rw [pow_succ', Module.End.mul_apply]
       exact creation_apply_not_zero a ad h hadj ih
 
-end CreatorOperatorNeverVanish
+end CreationOperatorNeverVanish
 
 /-!
 ## Number operator eigenvalues are discrete
@@ -286,23 +315,7 @@ theorem eigenvalue_mem_nat
     ∃ n : ℕ, c = n := by
   -- To be able to use decidable instances for natural numbers we need to use
   -- classical logic
-  classical
-  -- Existence of a ground state such that gets annihilated by a, i.e., a|0⟩ = 0.
-  have vanish : ∃ k, (a ^ k) x = 0 := exists_ground_state a ad h hadj hx
-  -- k is a non-zero natural number
-  have hk : Nat.find vanish ≠ 0 := by
-    intro hz
-    have := Nat.find_spec vanish
-    rw [hz] at this
-    simp [h0x] at this
-  -- There is a p = k-1 such that a^p |x⟩ = |0⟩
-  obtain ⟨p, hp⟩ := Nat.exists_eq_succ_of_ne_zero hk
-  have ground : (a^p) x ≠ 0 := Nat.find_min vanish (by simp [hp])
-  -- Applying the annihilation operator to the ground state yields zero.
-  have aground : a ((a^p) x) = 0 := by
-    rw [← Module.End.mul_apply, ← pow_succ', Nat.add_one, ← hp]
-    exact Nat.find_spec vanish
-  -- N(a^p|x⟩) = a† (a (a^p|x⟩)) = 0
+  obtain ⟨p, ground, aground⟩ := exists_ground_state a ad h hadj hx h0x
   have nground : (numberOp a ad) ((a^p) x) = 0 := by simp [numberOp, aground]
   have heq_zero : (c - p) • ((a^p) x) = 0 := by
     have := number_lower_k a ad h hx p
