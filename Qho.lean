@@ -326,18 +326,18 @@ theorem eigenvalue_mem_nat
   | inr hr => exact absurd hr ground
 
 /-- The eigenvalue of a ground state is zero. -/
-theorem eigenvalue_ground_state_eq_zero (hax₀ : a x₀ = 0) :
+theorem number_eq_zero_of_annihilation (hax₀ : a x₀ = 0) :
     (numberOp a ad) x₀ = 0 := by
-  simp [numberOp, hax₀]
+  simp only [numberOp, Module.End.mul_apply, hax₀, map_zero]
 
 /-- Every n ∈ ℕ can be realized as an eigenvalue of the number operator by
 applying (ad ^ n) to the ground state. -/
 theorem eigenvalue_nat_realized (h : ⁅a, ad⁆ = 1) (hax₀ : a x₀ = 0) (n : ℕ) :
     (numberOp a ad) ((ad ^ n) x₀) = n • ((ad ^ n) x₀) := by
-  have h0 := eigenvalue_ground_state_eq_zero a ad hax₀
+  have h0 := number_eq_zero_of_annihilation a ad hax₀
   rw [← zero_smul ℂ x₀] at h0
   have hn := number_raise_k a ad h h0 n
-  simp? [Nat.cast_smul_eq_nsmul] at hn
+  simp only [zero_add, Nat.cast_smul_eq_nsmul] at hn
   exact hn
 
 end EigenvaluesAreDiscrete
